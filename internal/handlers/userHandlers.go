@@ -189,10 +189,14 @@ func LoginUser(c *gin.Context) {
 		IsVerified: user.IsVerified,
 		IsAdmin:    user.IsAdmin,
 	}
-	token, tokenErr := auth.GenerateToken(userSub)
-	if tokenErr != nil {
+	// set access token err to 15 minutes
+	accessToken, accessTokenErr := auth.GenerateToken(userSub, 15)
+	//set the refressh token for 30 dayas
+	refreshToken, refreshTokenErr := auth.GenerateToken(userSub, 43200)
+
+	if accessTokenErr != nil || refreshTokenErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "error creating login token, please try again later or report the error",
+			"error": "error creating authentication tokens, please try again later or report the error",
 		})
 		return
 	}
@@ -200,7 +204,8 @@ func LoginUser(c *gin.Context) {
 		"message": "login successful",
 		"data": gin.H{
 
-			"token": token,
+			"accessToken":  accessToken,
+			"refreshToken": refreshToken,
 		},
 	})
 

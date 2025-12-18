@@ -1,10 +1,14 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
 	"golang.org/x/crypto/bcrypt"
@@ -44,11 +48,11 @@ type TokenSub struct {
 }
 
 // Generate a JWT token for a user
-func GenerateToken(userSub TokenSub) (string, error) {
+func GenerateToken(userSub TokenSub, minutes int32) (string, error) {
 	claims := JWTClaims{
 		UserSub: userSub,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // 1 day expiration
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(minutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -72,4 +76,37 @@ func VerifyToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func getAuthorizationHeader(c *gin.Context) (string, error) {
+	tokenHeader := c.GetHeader("Authorization")
+
+	// checl for AUTHORIZATION header
+	if tokenHeader == "" {
+		return "", errors.New(" authorization header required")
+
+	}
+
+	// check for authorzation format
+	parts := strings.SplitN(tokenHeader, "", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return "", errors.New("invalid authorization format")
+	}
+	return parts[0], nil
+
+}
+func AuthMidleware(c *gin.Context) {
+	token, err := getAuthorizationHeader(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	// check is token is valid
+	_, err = VerifyToken(token)
+	// get the refresh token cookie
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
 }
