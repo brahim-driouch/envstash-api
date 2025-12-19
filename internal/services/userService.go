@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,82 +13,57 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler struct {
+var (
+	ErrUserExists         = errors.New("user already exists")
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrWeakPassword       = errors.New("password too weak")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUnexpected         = errors.New("could not proceed you request")
+)
+
+type UserService struct {
 	userRepo interfaces.UserRepository
 }
 
-func NewUserHandler(userRepo interfaces.UserRepository) *UserHandler {
-	return &UserHandler{
+func NewUserService(userRepo interfaces.UserRepository) *UserService {
+	return &UserService{
 		userRepo: userRepo,
 	}
 }
 
-func (h *UserHandler) RegisterUser(c *gin.Context) {
-
-	var newUser = models.CreateUserInput{}
-
-	if err := c.ShouldBindJSON(&newUser); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request payload",
-		})
-		return
+func (s *UserService) RegisterUser(ctx context.Context, input *models.CreateUserInput) (*models.User, error) {
+	validationError := validators.ValidateNewUserFields(*input)
+	if validationError != nil {
+		return nil, validationError
 	}
 
-	validationResult := validators.ValidateNewUserFields(newUser)
-	errorMessages := make([]string, len(validationResult))
-	for i, err := range validationResult {
-		errorMessages[i] = err.Error()
-	}
-	if len(errorMessages) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"errors": errorMessages,
-		})
-		return
-	}
-
-	userExists, err := h.userRepo.UserExists(c.Request.Context(), newUser.Email)
+	userExists, err := s.userRepo.UserExists(ctx, input.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to check if user exists",
-		})
-		return
+		return nil, ErrUnexpected
 	}
 	if userExists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "user with this email already exists",
-		})
-		return
+		return nil, ErrUserExists
 	}
-	hash, err := auth.HashPassword(newUser.Password)
+	hash, err := auth.HashPassword(input.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to hash password",
-		})
-		return
+		return nil, ErrUnexpected
 	}
 	// Set the hashed password
-	newUser.Password = string(hash)
+	input.Password = string(hash)
 
-	u, err := h.userRepo.CreateUser(c.Request.Context(), &newUser, newUser.Password)
+	u, err := s.userRepo.CreateUser(ctx, input, input.Password)
 
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to create user",
-		})
-		return
+		return nil, ErrUnexpected
 	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "User registration successful",
-		"user":    u.ToResponse(),
-	})
+	return u, nil
 
 }
 
 // delete user handler
 
-func (h *UserHandler) DeleteUser(c *gin.Context) {
+func (s *UserService) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -95,7 +72,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.userRepo.FindUserByID(c.Request.Context(), userID)
+	u, err := s.userRepo.FindUserByID(c.Request.Context(), userID)
 	if err != nil || u == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "user not found",
@@ -103,7 +80,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	deletionError := h.userRepo.DeleteUser(c.Request.Context(), userID)
+	deletionError := s.userRepo.DeleteUser(c.Request.Context(), userID)
 	if deletionError != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete user",
@@ -115,7 +92,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	})
 }
 
-func (h *UserHandler) UpdateUser(c *gin.Context) {
+func (s *UserService) UpdateUser(c *gin.Context) {
 	var updateData models.UpdateUserInput
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
@@ -130,7 +107,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 	//checl if user exists
-	u, err := h.userRepo.FindUserByID(c.Request.Context(), updateData.ID)
+	u, err := s.userRepo.FindUserByID(c.Request.Context(), updateData.ID)
 	fmt.Println(updateData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -145,7 +122,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 	// update user
-	updatedUser, err := h.userRepo.UpdateUser(c.Request.Context(), updateData.ID, &updateData)
+	updatedUser, err := s.userRepo.UpdateUser(c.Request.Context(), updateData.ID, &updateData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update user",
@@ -159,7 +136,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 }
 
-func (h *UserHandler) LoginUser(c *gin.Context) {
+func (s *UserService) LoginUser(c *gin.Context) {
 
 	var userLoginInput models.LoginInput
 	//check request payload
@@ -171,7 +148,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	}
 	// get the user from db
-	user, err := h.userRepo.FindUserByEmail(c.Request.Context(), userLoginInput.Email)
+	user, err := s.userRepo.FindUserByEmail(c.Request.Context(), userLoginInput.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid email or password",

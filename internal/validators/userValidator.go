@@ -2,31 +2,37 @@ package validators
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 
 	"github.com/brahim-driouch/envstash.git/internal/models"
 )
 
-func ValidateNewUserFields(newUser models.CreateUserInput) []error {
-	validationErrors := []error{}
+var (
+	ErrMissingFields    = errors.New("required fields missing")
+	ErrNameStringLength = errors.New("fullname must be at least 4 letters longs")
+	ErrPasswordLength   = errors.New("password must be at least 8 characters")
+	ErrInvalidEmail     = errors.New("invalid email format")
+	ErrPasswordMatch    = errors.New("passwords do not match")
+)
+
+func ValidateNewUserFields(newUser models.CreateUserInput) error {
 	if len(newUser.Email) == 0 || len(newUser.Fullname) == 0 || len(newUser.Password) == 0 {
-		validationErrors = append(validationErrors, errors.New("all fileds are required"))
+		return ErrMissingFields
 	}
-	if len(newUser.Fullname) < 5 {
-		validationErrors = append(validationErrors, errors.New("fullname must be at least 3 characters long"))
+	if len(newUser.Fullname) < 4 {
+		return ErrNameStringLength
 	}
 
 	if len(newUser.Password) < 8 {
-		validationErrors = append(validationErrors, errors.New("password must be at least 6 characters long"))
+		return ErrPasswordLength
 	}
 	if !isValidEmail(newUser.Email) {
-		validationErrors = append(validationErrors, errors.New("invalid email format"))
+		return ErrInvalidEmail
 	}
-	fmt.Println("Validation Errors:", validationErrors)
-	if len(validationErrors) > 0 {
-		return validationErrors
+	if newUser.Password != newUser.ConfirmPassword {
+		return ErrPasswordMatch
 	}
+
 	return nil
 }
 
