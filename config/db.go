@@ -3,28 +3,29 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var Pool *pgxpool.Pool = nil
-
-func ConnectDB() error {
-	if Pool != nil {
-		return nil // Already connected
-	}
+// ConnectDB creates and returns a database connection pool
+func ConnectDB() (*pgxpool.Pool, error) { // ← Fixed: comma between type and error
 	databaseUrl := os.Getenv("DATABASE_URL")
 	if databaseUrl == "" {
-		return errors.New("database url environment variable is not set")
+		return nil, errors.New("DATABASE_URL environment variable is not set")
 	}
+
 	pool, err := pgxpool.New(context.Background(), databaseUrl)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create database pool: %w", err)
 	}
-	if pool == nil {
-		return errors.New("failed to create database connection pool")
+
+	// Test the connection
+	if err := pool.Ping(context.Background()); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	Pool = pool
-	return nil
+
+	return pool, nil
 }

@@ -1,4 +1,4 @@
-package data
+package queries
 
 var UserQueries = struct {
 	InsertUser      string

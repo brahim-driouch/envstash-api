@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/brahim-driouch/envbox.git/internal/models"
+	"github.com/brahim-driouch/envstash.git/internal/models"
 )
 
 func ValidateNewUserFields(newUser models.CreateUserInput) []error {

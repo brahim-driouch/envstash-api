@@ -1,17 +1,27 @@
-package handlers
+package services
 
 import (
 	"fmt"
 	"net/http"
 
-	"github.com/brahim-driouch/envbox.git/internal/auth"
-	"github.com/brahim-driouch/envbox.git/internal/models"
-	repository "github.com/brahim-driouch/envbox.git/internal/repos"
-	"github.com/brahim-driouch/envbox.git/internal/validators"
+	"github.com/brahim-driouch/envstash.git/internal/auth"
+	"github.com/brahim-driouch/envstash.git/internal/models"
+	"github.com/brahim-driouch/envstash.git/internal/repos/interfaces"
+	"github.com/brahim-driouch/envstash.git/internal/validators"
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterUser(c *gin.Context) {
+type UserHandler struct {
+	userRepo interfaces.UserRepository
+}
+
+func NewUserHandler(userRepo interfaces.UserRepository) *UserHandler {
+	return &UserHandler{
+		userRepo: userRepo,
+	}
+}
+
+func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 	var newUser = models.CreateUserInput{}
 
@@ -34,9 +44,7 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	userRepo := repository.NewUserRepository()
-
-	userExists, err := userRepo.UserExists(c.Request.Context(), newUser.Email)
+	userExists, err := h.userRepo.UserExists(c.Request.Context(), newUser.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to check if user exists",
@@ -59,7 +67,7 @@ func RegisterUser(c *gin.Context) {
 	// Set the hashed password
 	newUser.Password = string(hash)
 
-	u, err := userRepo.CreateUser(c.Request.Context(), &newUser, newUser.Password)
+	u, err := h.userRepo.CreateUser(c.Request.Context(), &newUser, newUser.Password)
 
 	if err != nil {
 		fmt.Println(err)
@@ -78,7 +86,7 @@ func RegisterUser(c *gin.Context) {
 
 // delete user handler
 
-func DeleteUser(c *gin.Context) {
+func (h *UserHandler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -87,8 +95,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	userRepo := repository.NewUserRepository()
-	u, err := userRepo.FindUserByID(c.Request.Context(), userID)
+	u, err := h.userRepo.FindUserByID(c.Request.Context(), userID)
 	if err != nil || u == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "user not found",
@@ -96,7 +103,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	deletionError := userRepo.DeleteUser(c.Request.Context(), userID)
+	deletionError := h.userRepo.DeleteUser(c.Request.Context(), userID)
 	if deletionError != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete user",
@@ -108,7 +115,7 @@ func DeleteUser(c *gin.Context) {
 	})
 }
 
-func UpdateUser(c *gin.Context) {
+func (h *UserHandler) UpdateUser(c *gin.Context) {
 	var updateData models.UpdateUserInput
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
@@ -123,8 +130,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	//checl if user exists
-	userRepo := repository.NewUserRepository()
-	u, err := userRepo.FindUserByID(c.Request.Context(), updateData.ID)
+	u, err := h.userRepo.FindUserByID(c.Request.Context(), updateData.ID)
 	fmt.Println(updateData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -139,7 +145,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	// update user
-	updatedUser, err := userRepo.UpdateUser(c.Request.Context(), updateData.ID, &updateData)
+	updatedUser, err := h.userRepo.UpdateUser(c.Request.Context(), updateData.ID, &updateData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update user",
@@ -153,7 +159,7 @@ func UpdateUser(c *gin.Context) {
 
 }
 
-func LoginUser(c *gin.Context) {
+func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	var userLoginInput models.LoginInput
 	//check request payload
@@ -165,8 +171,7 @@ func LoginUser(c *gin.Context) {
 
 	}
 	// get the user from db
-	userRepo := repository.NewUserRepository()
-	user, err := userRepo.FindUserByEmail(c.Request.Context(), userLoginInput.Email)
+	user, err := h.userRepo.FindUserByEmail(c.Request.Context(), userLoginInput.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid email or password",
