@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,15 +10,6 @@ import (
 	"github.com/brahim-driouch/envstash.git/internal/repos/interfaces"
 	"github.com/brahim-driouch/envstash.git/internal/validators"
 	"github.com/gin-gonic/gin"
-)
-
-var (
-	ErrUserExists         = errors.New("user already exists")
-	ErrInvalidEmail       = errors.New("invalid email format")
-	ErrWeakPassword       = errors.New("password too weak")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUnexpected         = errors.New("could not proceed you request")
 )
 
 type UserService struct {
@@ -136,32 +126,16 @@ func (s *UserService) UpdateUser(c *gin.Context) {
 
 }
 
-func (s *UserService) LoginUser(c *gin.Context) {
-
-	var userLoginInput models.LoginInput
-	//check request payload
-	if err := c.ShouldBind(&userLoginInput); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid request payload",
-		})
-		return
-
-	}
+func (s *UserService) LoginUser(ctx context.Context, userLoginInput models.LoginInput) (*models.AuthToken, error) {
 	// get the user from db
-	user, err := s.userRepo.FindUserByEmail(c.Request.Context(), userLoginInput.Email)
+	user, err := s.userRepo.FindUserByEmail(ctx, userLoginInput.Email)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid email or password",
-		})
-		return
+		return nil, ErrUserNotFound
 	}
 	//if we have the user , compare passwords
 	isValidPassword := auth.ComparePasswords(userLoginInput.Password, user.PasswordHash)
 	if !isValidPassword {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid email or password",
-		})
-		return
+		return nil, ErrInvalidCredentials
 	}
 	// genetate token
 	var userSub = auth.TokenSub{
@@ -174,21 +148,14 @@ func (s *UserService) LoginUser(c *gin.Context) {
 	// set access token err to 15 minutes
 	accessToken, accessTokenErr := auth.GenerateToken(userSub, 15)
 	//set the refressh token for 30 dayas
-	refreshToken, refreshTokenErr := auth.GenerateToken(userSub, 43200)
+	refreshToken, refreshTokenErr := auth.GenerateToken(userSub, 60*24*15)
 
 	if accessTokenErr != nil || refreshTokenErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "error creating authentication tokens, please try again later or report the error",
-		})
-		return
+		return nil, ErrUnexpected
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message": "login successful",
-		"data": gin.H{
-
-			"accessToken":  accessToken,
-			"refreshToken": refreshToken,
-		},
-	})
+	return &models.AuthToken{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 
 }

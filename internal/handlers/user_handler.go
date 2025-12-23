@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/brahim-driouch/envstash.git/internal/models"
@@ -62,6 +63,40 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "registred successfully", "data": gin.H{"user": user.ToResponse()}})
 }
 
-func (h *UserHandler) LoginUser(c *gin.Context)  {}
+func (h *UserHandler) LoginUser(c *gin.Context) {
+	var loginInput models.LoginInput
+	if err := c.ShouldBindJSON(&loginInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+	tokens, err := h.userService.LoginUser(c.Request.Context(), loginInput)
+	fmt.Println(err)
+	if err != nil {
+		switch err {
+
+		case services.ErrInvalidCredentials,
+			services.ErrUserNotFound:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		case services.ErrUnexpected:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "An error occured, please try again later or report the error"})
+			return
+		}
+
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully", "data": tokens})
+}
 func (h *UserHandler) DeleteUser(c *gin.Context) {}
 func (h *UserHandler) UpdateUser(c *gin.Context) {}
+func (h *UserHandler) GetSession(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User session retrieved successfully", "user": user})
+}

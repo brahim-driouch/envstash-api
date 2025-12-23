@@ -8,64 +8,63 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HashPassword hashes a plaintext password using bcrypt
-
-// CheckPassword compares a plaintext password with a hash
-
-// jwt
-
-// Generate a JWT token for a user
-
-// Verify JWT token and return claims
-
 func getAuthorizationHeader(c *gin.Context) (string, error) {
 	tokenHeader := c.GetHeader("Authorization")
 
-	// checl for AUTHORIZATION header
 	if tokenHeader == "" {
-		return "", errors.New(" authorization header required")
-
+		return "", errors.New("authorization header required")
 	}
 
-	// check for authorzation format
-	parts := strings.SplitN(tokenHeader, "", 2)
+	parts := strings.SplitN(tokenHeader, " ", 2)
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		return "", errors.New("invalid authorization format")
 	}
-	return parts[0], nil
 
+	return parts[1], nil
 }
-func AuthMidleware(c *gin.Context) {
+
+func AuthMiddleware(c *gin.Context) {
 	token, err := getAuthorizationHeader(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-	// check is token is valid
+
+	// check if token is valid
 	claims, err := VerifyToken(token)
 	if err != nil {
 		// get the refresh token cookie
-		refreshToken, refreshTokenErr := c.Cookie("nvbx_ref_token")
+		refreshToken, refreshTokenErr := c.Cookie("nvstash_ref_token")
 		if refreshTokenErr != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session, please try to login"})
 			return
 		}
+
 		// check the refresh token
-		rerfeshTokenClaims, invalidRefreshTokenErr := VerifyToken(refreshToken)
+		refreshTokenClaims, invalidRefreshTokenErr := VerifyToken(refreshToken)
 		if invalidRefreshTokenErr != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session, please try to login"})
 			return
 		}
-		//generate new access token
-		newAccessToken, newAccessTokenErr := GenerateToken(rerfeshTokenClaims.UserSub, 30)
+
+		// generate new access token
+		newAccessToken, newAccessTokenErr := GenerateToken(refreshTokenClaims.UserSub, 15)
 		if newAccessTokenErr != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not create a new session token, please try again later or report the error"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "could not create a new session token"})
+			return
 		}
-		c.JSON(http.StatusAccepted, gin.H{"message": "a new access token generated", "data": gin.H{"accessToken": newAccessToken}})
+
+		// Set new token in header
+		c.Header("X-New-Access-Token", newAccessToken)
+
+		c.Set("user", refreshTokenClaims.UserSub)
+		c.Set("userId", refreshTokenClaims.UserSub.Id)
+		c.Next()
 		return
 	}
+
+	// Access token is valid
 	c.Set("user", claims.UserSub)
 	c.Set("userId", claims.UserSub.Id)
 	c.Next()
-
 }

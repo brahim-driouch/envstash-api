@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brahim-driouch/envstash.git/config"
+	"github.com/brahim-driouch/envstash.git/internal/auth"
 	"github.com/brahim-driouch/envstash.git/internal/handlers"
 	repository "github.com/brahim-driouch/envstash.git/internal/repos"
 	"github.com/brahim-driouch/envstash.git/internal/services"
@@ -57,8 +58,9 @@ func main() {
 	apiV1.POST("/users/login", userHandler.LoginUser)
 	//protected routes
 
-	apiV1.DELETE("/users/delete/:id", userHandler.DeleteUser)
-	apiV1.PUT("/users/update/:id", userHandler.UpdateUser)
+	apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware, userHandler.DeleteUser)
+	apiV1.PUT("/users/update/:id", auth.AuthMiddleware, userHandler.UpdateUser)
+	apiV1.GET("/users/session", auth.AuthMiddleware, userHandler.GetSession)
 
 	// Start the server
 	r.Run()
