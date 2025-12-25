@@ -98,5 +98,10 @@ func (h *UserHandler) GetSession(c *gin.Context) {
 		return
 
 	}
+	newAccessToken := c.GetHeader("X-New-Access-Token")
+	if newAccessToken != "" {
+
+		c.Header("X-New-Access-Token", newAccessToken)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "User session retrieved successfully", "user": user})
 }

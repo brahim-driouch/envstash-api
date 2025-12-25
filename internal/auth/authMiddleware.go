@@ -1,34 +1,29 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func getAuthorizationHeader(c *gin.Context) (string, error) {
+func getAuthorizationHeader(c *gin.Context) string {
 	tokenHeader := c.GetHeader("Authorization")
 
 	if tokenHeader == "" {
-		return "", errors.New("authorization header required")
+		return ""
 	}
 
 	parts := strings.SplitN(tokenHeader, " ", 2)
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		return "", errors.New("invalid authorization format")
+		return ""
 	}
 
-	return parts[1], nil
+	return parts[1]
 }
 
 func AuthMiddleware(c *gin.Context) {
-	token, err := getAuthorizationHeader(c)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+	token := getAuthorizationHeader(c)
 
 	// check if token is valid
 	claims, err := VerifyToken(token)

@@ -40,7 +40,7 @@ func main() {
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		ExposeHeaders:    []string{"Content-Length", "X-New-Access-Token"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -57,7 +57,8 @@ func main() {
 	apiV1.POST("/users/register", userHandler.RegisterUser)
 	apiV1.POST("/users/login", userHandler.LoginUser)
 	//protected routes
-
+	// get current session
+	apiV1.GET("/auth/session", auth.AuthMiddleware, userHandler.GetSession)
 	apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware, userHandler.DeleteUser)
 	apiV1.PUT("/users/update/:id", auth.AuthMiddleware, userHandler.UpdateUser)
 	apiV1.GET("/users/session", auth.AuthMiddleware, userHandler.GetSession)
