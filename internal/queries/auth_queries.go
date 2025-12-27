@@ -1,6 +1,10 @@
 package queries
 
 var AuthQueries = struct {
+	InsertUser           string
+	UserExists           string
+	FindUserByEmail      string
+	FindUserByID         string
 	CreateRefreshToken   string
 	FindRefreshToken     string
 	RevokeRefreshToken   string
@@ -9,6 +13,24 @@ var AuthQueries = struct {
 	FindActiveUserTokens string
 	DeleteUserToken      string
 }{
+	InsertUser: `
+        INSERT INTO users ( fullname, email, password_hash)
+        VALUES              ($1, $2, $3)
+        RETURNING id, created_at, updated_at
+    `,
+	FindUserByEmail: `
+        SELECT id, fullname, email,  password_hash, is_verified, is_admin, created_at, updated_at
+        FROM users
+        WHERE email = $1
+    `,
+	FindUserByID: `
+        SELECT id, email, fullname, password_hash, is_verified, is_admin, created_at, updated_at
+        FROM users
+        WHERE id = $1
+    `,
+	UserExists: `
+        SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)
+    `,
 	// Create a new refresh token
 	CreateRefreshToken: `
 		INSERT INTO refresh_tokens (user_id, token, expires_at, created_at, ip_address, user_agent) 

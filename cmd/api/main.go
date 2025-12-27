@@ -47,21 +47,25 @@ func main() {
 	// Define your routes and handlers here
 	apiV1 := r.Group("/api/v1")
 	//instantiate user service and user repo
-	userRepository, err := repository.NewUserRepository(dbPool)
-	if err != nil {
-		fmt.Println("Could not instantiate user repository %w", err)
-	}
+	userRepository := repository.NewUserRepository(dbPool)
 	userService := services.NewUserService(userRepository)
 	userHandler := handlers.NewUserHandler(userService)
+
+	authRepository := repository.NewAuthRepository(dbPool)
+	authService := services.NewAuthService(authRepository)
+	authHandler := handlers.NewAuthHandler(authService)
 	//pulic routes
-	apiV1.POST("/users/register", userHandler.RegisterUser)
-	apiV1.POST("/users/login", userHandler.LoginUser)
+	apiV1.POST("/auth/register", authHandler.RegisterUser)
+	apiV1.POST("/auth/login", authHandler.LoginUser)
+	apiV1.POST("/auth/logout", authHandler.LogoutUser)
+	//get current session
+	apiV1.GET("/auth/session", auth.AuthMiddleware(authService), authHandler.GetSession)
 	//protected routes
-	// get current session
-	apiV1.GET("/auth/session", auth.AuthMiddleware, userHandler.GetSession)
-	apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware, userHandler.DeleteUser)
-	apiV1.PUT("/users/update/:id", auth.AuthMiddleware, userHandler.UpdateUser)
-	apiV1.GET("/users/session", auth.AuthMiddleware, userHandler.GetSession)
+
+	//delete user
+	apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware(authService), userHandler.DeleteUser)
+	//update user
+	apiV1.PUT("/users/update/:id", auth.AuthMiddleware(authService), userHandler.UpdateUser)
 
 	// Start the server
 	r.Run()

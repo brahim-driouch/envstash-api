@@ -14,66 +14,11 @@ type userRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewUserRepository(db *pgxpool.Pool) (interfaces.UserRepository, error) {
-	if db == nil {
-		return nil, fmt.Errorf("queriesbase pool cannot be nil")
-	}
+func NewUserRepository(db *pgxpool.Pool) interfaces.UserRepository {
 
-	// Return concrete implementation as interface
 	return &userRepository{
 		db: db,
-	}, nil
-}
-
-func (r *userRepository) CreateUser(ctx context.Context, input *models.CreateUserInput, passwordHash string) (*models.User, error) {
-	// Prepare the SQL query for inserting the user
-	var u models.User
-	err := r.db.QueryRow(
-		ctx,
-		queries.UserQueries.InsertUser,
-		input.Fullname,
-		input.Email,
-		passwordHash,
-	).Scan(
-		&u.ID,
-		&u.CreatedAt,
-		&u.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, err
 	}
-	return &u, nil
-}
-
-func (r *userRepository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	var u models.User
-	err := r.db.QueryRow(ctx, queries.UserQueries.FindUserByEmail, email).Scan(
-		&u.ID,
-		&u.Fullname,
-		&u.Email,
-		&u.PasswordHash,
-		&u.IsVerified,
-		&u.IsAdmin,
-		&u.CreatedAt,
-		&u.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &u, nil
-
-}
-func (r *userRepository) UserExists(ctx context.Context, email string) (bool, error) {
-	var exists bool
-	err := r.db.QueryRow(ctx, queries.UserQueries.UserExists, email).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-	fmt.Printf("%v", exists)
-	return exists, nil
 }
 
 func (r *userRepository) FindUserByID(ctx context.Context, id string) (*models.User, error) {

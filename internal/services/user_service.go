@@ -1,11 +1,9 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/brahim-driouch/envstash.git/internal/auth"
 	"github.com/brahim-driouch/envstash.git/internal/models"
 	"github.com/brahim-driouch/envstash.git/internal/repos/interfaces"
 	"github.com/brahim-driouch/envstash.git/internal/validators"
@@ -20,35 +18,6 @@ func NewUserService(userRepo interfaces.UserRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
-}
-
-func (s *UserService) RegisterUser(ctx context.Context, input *models.CreateUserInput) (*models.User, error) {
-	validationError := validators.ValidateNewUserFields(*input)
-	if validationError != nil {
-		return nil, validationError
-	}
-
-	userExists, err := s.userRepo.UserExists(ctx, input.Email)
-	if err != nil {
-		return nil, ErrUnexpected
-	}
-	if userExists {
-		return nil, ErrUserExists
-	}
-	hash, err := auth.HashPassword(input.Password)
-	if err != nil {
-		return nil, ErrUnexpected
-	}
-	// Set the hashed password
-	input.Password = string(hash)
-
-	u, err := s.userRepo.CreateUser(ctx, input, input.Password)
-
-	if err != nil {
-		return nil, ErrUnexpected
-	}
-	return u, nil
-
 }
 
 // delete user handler
@@ -123,39 +92,5 @@ func (s *UserService) UpdateUser(c *gin.Context) {
 		"message": "User updated successfully",
 		"user":    updatedUser.ToResponse(),
 	})
-
-}
-
-func (s *UserService) LoginUser(ctx context.Context, userLoginInput models.LoginInput) (*models.AuthToken, error) {
-	// get the user from db
-	user, err := s.userRepo.FindUserByEmail(ctx, userLoginInput.Email)
-	if err != nil {
-		return nil, ErrUserNotFound
-	}
-	//if we have the user , compare passwords
-	isValidPassword := auth.ComparePasswords(userLoginInput.Password, user.PasswordHash)
-	if !isValidPassword {
-		return nil, ErrInvalidCredentials
-	}
-	// genetate token
-	var userSub = auth.TokenSub{
-		Id:         user.ID,
-		Fullname:   user.Fullname,
-		Email:      user.Email,
-		IsVerified: user.IsVerified,
-		IsAdmin:    user.IsAdmin,
-	}
-	// set access token err to 15 minutes
-	accessToken, accessTokenErr := auth.GenerateToken(userSub, 15)
-	//set the refressh token for 30 dayas
-	refreshToken, refreshTokenErr := auth.GenerateToken(userSub, 60*24*15)
-
-	if accessTokenErr != nil || refreshTokenErr != nil {
-		return nil, ErrUnexpected
-	}
-	return &models.AuthToken{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
 
 }

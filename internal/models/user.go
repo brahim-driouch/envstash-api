@@ -25,8 +25,10 @@ type CreateUserInput struct {
 
 // LoginInput is used for login
 type LoginInput struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required"`
+	IPAddress string `json:"ip_address" binding:"required"`
+	UserAgent string `json:"user_agent" binding:"required"`
 }
 
 // UpdateUserInput is used when updating a user

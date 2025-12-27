@@ -1,6 +1,8 @@
-package auth
+package utils
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"os"
 	"time"
 
@@ -21,7 +23,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userSub TokenSub, minutes int32) (string, error) {
+func GenerateAccessToken(userSub TokenSub, minutes int32) (string, error) {
 	claims := JWTClaims{
 		UserSub: userSub,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -48,4 +50,14 @@ func VerifyToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func GenerateRefreshToken() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	token := base64.URLEncoding.EncodeToString(bytes)
+	return token, nil
 }

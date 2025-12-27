@@ -7,12 +7,9 @@ import (
 )
 
 type UserRepository interface {
-	// Create
-	CreateUser(ctx context.Context, input *models.CreateUserInput, passwordHash string) (*models.User, error)
 
 	// Read
 	FindUserByID(ctx context.Context, id string) (*models.User, error)
-	FindUserByEmail(ctx context.Context, email string) (*models.User, error)
 	ListUsers(ctx context.Context) ([]*models.User, error)
 
 	// Update
@@ -21,7 +18,4 @@ type UserRepository interface {
 
 	// Delete
 	DeleteUser(ctx context.Context, id string) error
-
-	// Auth helpers
-	UserExists(ctx context.Context, email string) (bool, error)
 }
