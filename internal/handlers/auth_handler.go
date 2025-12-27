@@ -33,11 +33,13 @@ func (h *AuthHandler) RegisterUser(c *gin.Context) {
 	user, err := h.authService.RegisterUser(c, &newUser)
 
 	if err != nil {
+
 		switch err {
 		case services.ErrInvalidCredentials:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 
 		case services.ErrUnexpected:
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 
 		case services.ErrUserExists:

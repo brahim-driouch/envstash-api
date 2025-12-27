@@ -128,10 +128,20 @@ func (r *authRepository) DeleteUserToken(ctx context.Context, tokenID string, us
 }
 
 func (r *authRepository) CreateUser(ctx context.Context, input *models.CreateUserInput, passwordHash string) (*models.User, error) {
-	return nil, nil
+	var user models.User
+	err := r.db.QueryRow(ctx, queries.AuthQueries.CreateUser, input.Fullname, input.Email, passwordHash).Scan(&user.ID, &user.Fullname, &user.Email, &user.IsVerified, &user.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 func (r *authRepository) UserExists(ctx context.Context, email string) (bool, error) {
-	return false, nil
+	var userExists bool
+	err := r.db.QueryRow(ctx, queries.AuthQueries.UserExists, email).Scan(&userExists)
+	if err != nil {
+		return false, err
+	}
+	return userExists, nil
 }
 func (r *authRepository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user := models.User{}

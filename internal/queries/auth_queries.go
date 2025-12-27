@@ -1,7 +1,7 @@
 package queries
 
 var AuthQueries = struct {
-	InsertUser           string
+	CreateUser           string
 	UserExists           string
 	FindUserByEmail      string
 	FindUserByID         string
@@ -13,10 +13,10 @@ var AuthQueries = struct {
 	FindActiveUserTokens string
 	DeleteUserToken      string
 }{
-	InsertUser: `
+	CreateUser: `
         INSERT INTO users ( fullname, email, password_hash)
         VALUES              ($1, $2, $3)
-        RETURNING id, created_at, updated_at
+        RETURNING id, fullname, email, is_verified, is_admin
     `,
 	FindUserByEmail: `
         SELECT id, fullname, email,  password_hash, is_verified, is_admin, created_at, updated_at

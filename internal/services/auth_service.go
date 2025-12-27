@@ -57,6 +57,7 @@ func (s *AuthService) RegisterUser(ctx context.Context, input *models.CreateUser
 	}
 
 	userExists, err := s.authRepo.UserExists(ctx, input.Email)
+
 	if err != nil {
 		return nil, ErrUnexpected
 	}
@@ -75,6 +76,32 @@ func (s *AuthService) RegisterUser(ctx context.Context, input *models.CreateUser
 	if err != nil {
 		return nil, ErrUnexpected
 	}
+	emailData := make(map[string]string)
+	emailData["fullname"] = u.Fullname
+	emailData["email"] = u.Email
+
+	go func() {
+		emailCtx := context.Background()
+		verificationToken := "skdjjddikpmnsjxnu"
+		// Build email with template rendering
+		emailParams, err := utils.BuildVerificationEmail(
+			emailData["email"],
+			emailData["fullname"],
+			verificationToken,
+		)
+
+		if err != nil {
+			log.Printf("❌ Failed to build verification email: %v", err)
+			return
+		}
+
+		// Send email
+		if err := utils.SendEmail(emailCtx, emailParams); err != nil {
+			log.Printf("❌ Failed to send verification email to %s: %v", u.Email, err)
+		} else {
+			log.Printf("✓ Verification email sent to %s", u.Email)
+		}
+	}()
 	return u, nil
 
 }
