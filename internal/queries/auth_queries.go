@@ -2,6 +2,7 @@ package queries
 
 var AuthQueries = struct {
 	CreateUser           string
+	VerifyEmail          string
 	UserExists           string
 	FindUserByEmail      string
 	FindUserByID         string
@@ -84,5 +85,11 @@ var AuthQueries = struct {
 		SET revoked_at = NOW() 
 		WHERE id = $1 
 		  AND user_id = $2
+	`,
+
+	VerifyEmail: `
+		UPDATE users 
+		SET is_verified = true 
+		WHERE id = $1
 	`,
 }

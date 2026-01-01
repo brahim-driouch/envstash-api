@@ -163,3 +163,8 @@ func (r *authRepository) FindUserByID(ctx context.Context, userID string) (*mode
 	}
 	return &user, nil
 }
+
+func (r *authRepository) VerifyEmail(ctx context.Context, userID string) error {
+	_, err := r.db.Exec(ctx, queries.AuthQueries.VerifyEmail, userID)
+	return err
+}

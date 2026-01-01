@@ -78,9 +78,9 @@ func BuildVerificationEmail(toEmail, fullname, verificationToken string) (*resen
 
 	// Build email request
 	emailParams := &resend.SendEmailRequest{
-		From:    "Envify <noreply@dataentryjobs.io>",
+		From:    "Envbox <noreply@dataentryjobs.io>",
 		To:      []string{toEmail},
-		Subject: "Verify Your Email - Envify",
+		Subject: "Verify Your Email - Envbox",
 		Html:    htmlBody,
 		// Text:    fmt.Sprintf("Hey %s! Click here to verify your email: %s", fullname, verificationLink),
 	}

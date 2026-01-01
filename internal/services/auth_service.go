@@ -13,6 +13,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var (
+	ErrUserExists         = errors.New("user already exists")
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrWeakPassword       = errors.New("password too weak")
+	ErrUserNotFound       = errors.New("no account found with this emails")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUnexpected         = errors.New("could not proceed you request")
+	ErrUserNotVerified    = errors.New("please verify your email before logging in. Check your inbox for the verification link.")
+)
+
 type AuthService struct {
 	authRepo interfaces.AuthRepository
 }
@@ -51,6 +61,7 @@ func (s *AuthService) DeleteUserToken(ctx context.Context, tokenID string, userI
 	return s.authRepo.DeleteUserToken(ctx, tokenID, userID)
 }
 func (s *AuthService) RegisterUser(ctx context.Context, input *models.CreateUserInput) (*models.User, error) {
+
 	validationError := validators.ValidateNewUserFields(*input)
 	if validationError != nil {
 		return nil, validationError
@@ -76,17 +87,18 @@ func (s *AuthService) RegisterUser(ctx context.Context, input *models.CreateUser
 	if err != nil {
 		return nil, ErrUnexpected
 	}
-	emailData := make(map[string]string)
-	emailData["fullname"] = u.Fullname
-	emailData["email"] = u.Email
 
-	go func() {
-		emailCtx := context.Background()
-		verificationToken := "skdjjddikpmnsjxnu"
+	go func(ctx context.Context) {
+
+		verificationToken, err := utils.GenerateEmailVerifcationToken(u.ID)
+		if err != nil {
+			log.Printf("❌ Failed to generate verification token: %v", err)
+			return
+		}
 		// Build email with template rendering
 		emailParams, err := utils.BuildVerificationEmail(
-			emailData["email"],
-			emailData["fullname"],
+			u.Email,
+			u.Fullname,
 			verificationToken,
 		)
 
@@ -96,12 +108,12 @@ func (s *AuthService) RegisterUser(ctx context.Context, input *models.CreateUser
 		}
 
 		// Send email
-		if err := utils.SendEmail(emailCtx, emailParams); err != nil {
+		if err := utils.SendEmail(ctx, emailParams); err != nil {
 			log.Printf("❌ Failed to send verification email to %s: %v", u.Email, err)
 		} else {
 			log.Printf("✓ Verification email sent to %s", u.Email)
 		}
-	}()
+	}(ctx)
 	return u, nil
 
 }
@@ -119,8 +131,12 @@ func (s *AuthService) LoginUser(ctx context.Context, userLoginInput models.Login
 
 		return nil, ErrInvalidCredentials
 	}
+	//check if user is verified
+	if !user.IsVerified {
+		return nil, ErrUserNotVerified
+	}
 
-	// genetate token
+	// generate token
 	var userSub = utils.TokenSub{
 		Id:         user.ID,
 		Fullname:   user.Fullname,
@@ -183,4 +199,75 @@ func (s *AuthService) FindUserByID(ctx context.Context, userID string) (*models.
 		return nil, err
 	}
 	return u, nil
+}
+
+func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
+	if token == "" {
+		return errors.New("invalid verification token")
+	}
+	validToken, err := utils.VerifyAndDecodeEmailVerificationToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	if validToken == nil {
+		return errors.New("invalid verification token")
+	}
+	// check if user exists with the email from the token
+	user, err := s.authRepo.FindUserByID(ctx, validToken.UserID)
+	if err != nil || user == nil {
+		return errors.New("user not found")
+	}
+	if user.IsVerified {
+		return errors.New("user already verified")
+	}
+	// update user as verified
+	user.IsVerified = true
+	err = s.authRepo.VerifyEmail(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string) error {
+	user, err := s.authRepo.FindUserByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+	if user.IsVerified {
+		return errors.New("user already verified")
+	}
+
+	go func() {
+		emailCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		verificationToken, err := utils.GenerateEmailVerifcationToken(user.ID)
+		if err != nil {
+			log.Printf("❌ Failed to generate verification token: %v", err)
+			return
+		}
+		// Build email with template rendering
+		emailParams, err := utils.BuildVerificationEmail(
+			user.Email,
+			user.Fullname,
+			verificationToken,
+		)
+
+		if err != nil {
+			log.Printf("❌ Failed to build verification email: %v", err)
+			return
+		}
+
+		// Send email
+		if err := utils.SendEmail(emailCtx, emailParams); err != nil {
+			log.Printf("❌ Failed to send verification email to %s: %v", user.Email, err)
+		} else {
+			log.Printf("✓ Verification email sent to %s", user.Email)
+		}
+
+	}()
+	return nil
 }

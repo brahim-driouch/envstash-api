@@ -77,7 +77,8 @@ func (h *AuthHandler) LoginUser(c *gin.Context) {
 		switch err {
 
 		case services.ErrInvalidCredentials,
-			services.ErrUserNotFound:
+			services.ErrUserNotFound,
+			services.ErrUserNotVerified:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		case services.ErrUnexpected:
@@ -137,4 +138,39 @@ func (h *AuthHandler) GetSession(c *gin.Context) {
 		c.Header("X-New-Access-Token", newAccessToken)
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User session retrieved successfully", "user": user})
+}
+
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Verification token is required"})
+		return
+	}
+
+	err := h.authService.VerifyEmail(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
+}
+
+func (h *AuthHandler) ResendVerificationEmail(c *gin.Context) {
+	var EmailPayload struct {
+		Email string `json:"email"`
+	}
+	ctx := c.Request.Context()
+	if err := c.ShouldBindJSON(&EmailPayload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	err := h.authService.ResendVerificationEmail(ctx, EmailPayload.Email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Verification email resent successfully"})
 }

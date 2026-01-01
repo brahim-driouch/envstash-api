@@ -10,6 +10,7 @@ type AuthRepository interface {
 	// Create
 	CreateUser(ctx context.Context, input *models.CreateUserInput, passwordHash string) (*models.User, error)
 	UserExists(ctx context.Context, email string) (bool, error)
+	VerifyEmail(ctx context.Context, userId string) error
 	CreateRefreshToken(ctx context.Context, refreshToken *models.RefreshToken) error
 	FindRefreshToken(ctx context.Context, token string) (*models.RefreshToken, error)
 	FindUserByID(ctx context.Context, userID string) (*models.User, error)

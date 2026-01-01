@@ -46,26 +46,41 @@ func main() {
 	}))
 	// Define your routes and handlers here
 	apiV1 := r.Group("/api/v1")
+	authRoutes := apiV1.Group("/auth")
+	projectRoutes := apiV1.Group("/projects")
 	//instantiate user service and user repo
 	userRepository := repository.NewUserRepository(dbPool)
 	userService := services.NewUserService(userRepository)
 	userHandler := handlers.NewUserHandler(userService)
 
 	authRepository := repository.NewAuthRepository(dbPool)
+	projectRepository := repository.NewProjectRepository(dbPool)
 	authService := services.NewAuthService(authRepository)
+	projectService := services.NewProjectService(projectRepository)
+	projectHandler := handlers.NewProjectHandler(projectService)
 	authHandler := handlers.NewAuthHandler(authService)
 	//pulic routes
-	apiV1.POST("/auth/register", authHandler.RegisterUser)
-	apiV1.POST("/auth/login", authHandler.LoginUser)
-	apiV1.POST("/auth/logout", authHandler.LogoutUser)
-	//get current session
-	apiV1.GET("/auth/session", auth.AuthMiddleware(authService), authHandler.GetSession)
-	//protected routes
+	authRoutes.POST("/register", authHandler.RegisterUser)
+	authRoutes.GET("/verify", authHandler.VerifyEmail)
+	authRoutes.POST("/resend-verification", authHandler.ResendVerificationEmail)
+	authRoutes.POST("/login", authHandler.LoginUser)
+	authRoutes.POST("/logout", authHandler.LogoutUser)
 
-	//delete user
-	apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware(authService), userHandler.DeleteUser)
-	//update user
-	apiV1.PUT("/users/update/:id", auth.AuthMiddleware(authService), userHandler.UpdateUser)
+	//protected routes
+	{
+		// getr current session
+		authRoutes.GET("/session", auth.AuthMiddleware(authService), authHandler.GetSession)
+		//delete user
+		apiV1.DELETE("/users/delete/:id", auth.AuthMiddleware(authService), userHandler.DeleteUser)
+		//update user
+		apiV1.PUT("/users/update/:id", auth.AuthMiddleware(authService), userHandler.UpdateUser)
+
+		//projects routes
+		projectRoutes.POST("/", auth.AuthMiddleware(authService), projectHandler.CreateProject)
+		// projectRoutes.GET("/:id", auth.AuthMiddleware(authService), projectHandler.GetProjectByID)
+		// projectRoutes.PUT("/:id", auth.AuthMiddleware(authService), projectHandler.UpdateProject)
+		// projectRoutes.DELETE("/:id", auth.AuthMiddleware(authService), projectHandler.DeleteProject)
+	}
 
 	// Start the server
 	r.Run()
