@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -37,7 +38,9 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 			// if not valid, get the refresh token cookie
 			refreshToken, refreshTokenErr := c.Cookie("nvstash_ref_token")
 			// if refresh token is not valid, return unauthorized
+
 			if refreshTokenErr != nil {
+				log.Println(c.Request.Header)
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session, please try to login"})
 				return
 			}
@@ -46,12 +49,12 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 			refreshTokenClaims, invalidRefreshTokenErr := authService.FindRefreshToken(ctx, refreshToken)
 			// if refresh token is not valid, return unauthorized
 			if invalidRefreshTokenErr != nil {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session, please try to login"})
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session token, please login again"})
 				return
 			}
 			//check if refresh token is expired
 			if refreshTokenClaims.ExpiresAt.Before(time.Now()) {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session expired, please login"})
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session expired, please login again"})
 				return
 			}
 			//check if refresh token is revoked

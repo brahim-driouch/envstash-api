@@ -8,10 +8,9 @@ import (
 type Project struct {
 	ID          string     `json:"id" db:"id"`
 	Name        string     `json:"name" db:"name" validate:"required,min=1,max=255"`
-	Slug        string     `json:"slug" db:"slug" validate:"required,min=1,max=255"`
 	RepoURL     *string    `json:"repo_url,omitempty" db:"repo_url" validate:"omitempty,url"`
 	Description string     `json:"description,omitempty" db:"description"`
-	OwnerID     string     `json:"owner_id" db:"owner_id"`
+	UserID      string     `json:"owner_id" db:"owner_id"`
 	TeamID      *string    `json:"team_id,omitempty" db:"team_id"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
@@ -28,7 +27,7 @@ type ProjectWithStats struct {
 // projects with details
 type ProjectWithDetails struct {
 	Project
-	Owner       *User                 `json:"owner,omitempty"`
+	User        *User                 `json:"user,omitempty"`
 	Team        *Team                 `json:"team,omitempty"`
 	Members     []ProjectMember       `json:"members,omitempty"`
 	EnvVars     []EnvironmentVariable `json:"env_vars,omitempty"`
@@ -57,11 +56,10 @@ type ProjectMemberWithUser struct {
 // CreateProjectRequest represents the request to create a project
 type CreateProjectRequest struct {
 	Name        string   `json:"name" validate:"required,min=1,max=255"`
-	Slug        string   `json:"slug" validate:"required,min=1,max=255,alphanum"`
 	RepoURL     *string  `json:"repo_url,omitempty" validate:"omitempty,url"`
 	Description string   `json:"description,omitempty" validate:"max=1000"`
 	TeamID      *string  `json:"team_id,omitempty" validate:"omitempty,uuid"`
-	Members     []string `json:"members,omitempty" validate:"dive,email"` // User emails
+	Members     []string `json:"members,omitempty" validate:"dive,email"`
 }
 
 // UpdateProjectRequest represents the request to update a project
@@ -87,10 +85,9 @@ type UpdateProjectMemberRequest struct {
 type ProjectResponse struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Slug        string    `json:"slug"`
 	RepoURL     *string   `json:"repo_url,omitempty"`
 	Description string    `json:"description,omitempty"`
-	OwnerID     string    `json:"owner_id"`
+	UserID      string    `json:"owner_id"`
 	TeamID      *string   `json:"team_id,omitempty"`
 	MemberCount int       `json:"member_count"`
 	EnvVarCount int       `json:"env_var_count"`
@@ -111,10 +108,9 @@ type ProjectListResponse struct {
 type ProjectDetailsResponse struct {
 	ID          string                  `json:"id"`
 	Name        string                  `json:"name"`
-	Slug        string                  `json:"slug"`
 	RepoURL     *string                 `json:"repo_url,omitempty"`
 	Description string                  `json:"description,omitempty"`
-	Owner       UserResponse            `json:"owner"`
+	User        UserResponse            `json:"user"`
 	Team        *TeamResponse           `json:"team,omitempty"`
 	Members     []ProjectMemberResponse `json:"members"`
 	EnvVars     []EnvVarResponse        `json:"env_vars"`
@@ -136,7 +132,7 @@ type ProjectMemberResponse struct {
 
 // ProjectFilter represents filters for querying projects
 type ProjectFilter struct {
-	OwnerID        *string `json:"owner_id,omitempty"`
+	UserID         *string `json:"user_id,omitempty"`
 	TeamID         *string `json:"team_id,omitempty"`
 	Search         string  `json:"search,omitempty"` // Search in name/description
 	IncludeDeleted bool    `json:"include_deleted"`
@@ -175,7 +171,7 @@ type ProjectPermissions struct {
 type Team struct {
 	ID        string    `json:"id" db:"id"`
 	Name      string    `json:"name" db:"name"`
-	OwnerID   string    `json:"owner_id" db:"owner_id"`
+	UserID    string    `json:"user_id" db:"user_id"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 

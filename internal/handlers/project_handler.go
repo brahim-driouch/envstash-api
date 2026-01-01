@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/brahim-driouch/envstash.git/internal/models"
@@ -21,6 +22,7 @@ func NewProjectHandler(projectService *services.ProjectService) *ProjectHandler 
 
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	var createProjectPayload models.CreateProjectRequest
+	ctx := c.Request.Context()
 	if err := c.ShouldBindJSON(&createProjectPayload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload"})
 		return
@@ -32,8 +34,9 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 	user := userSub.(utils.TokenSub)
-	err := h.projectService.CreateProject(c.Request.Context(), user.Id, &createProjectPayload)
+	err := h.projectService.CreateProject(ctx, user.Id, &createProjectPayload)
 	if err != nil {
+		log.Println("Error creating project:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create project"})
 		return
 	}
