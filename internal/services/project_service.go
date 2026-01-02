@@ -49,3 +49,14 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID string, creat
 	}
 	return nil
 }
+
+func (s *ProjectService) GetProjectsByUserID(ctx context.Context, userID string) (*[]models.Project, error) {
+	if userID == "" {
+		return nil, ErrInvalidUserID
+	}
+	projects, err := s.projectRepo.GetAllProjects(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return projects, nil
+}

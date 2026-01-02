@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"log"
 
 	"github.com/brahim-driouch/envstash.git/internal/models"
 	"github.com/brahim-driouch/envstash.git/internal/queries"
@@ -30,8 +31,27 @@ func (r *ProjectRepository) GetProjectByID(ctx context.Context, id string) (*mod
 	return nil, nil
 }
 
-func (r *ProjectRepository) GetAllProjects(ctx context.Context, userID string) ([]models.Project, error) {
-	return nil, nil
+// TODO CREATE INDEXES ON MEMBERS TABLE
+func (r *ProjectRepository) GetAllProjects(ctx context.Context, userID string) (*[]models.Project, error) {
+	var projects []models.Project
+	rows, err := r.db.Query(ctx, queries.ProjectQueries.GetAllProjects, userID)
+	if err != nil {
+		log.Println(err)
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var project models.Project
+		err := rows.Scan(&project.ID, &project.Name, &project.Description, &project.UserID, &project.CreatedAt, &project.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, project)
+	}
+
+	return &projects, nil
 }
 
 func (r *ProjectRepository) UpdateProject(ctx context.Context, id string, project *models.UpdateProjectRequest) error {
@@ -50,10 +70,5 @@ func (r *ProjectRepository) GetProjectsByUserID(ctx context.Context, userID stri
 }
 
 func (r *ProjectRepository) GetProjectByName(ctx context.Context, name string, userID string) (*models.Project, error) {
-	return nil, nil
-}
-
-func (r *ProjectRepository) ListProjects(ctx context.Context, userID string) (*[]models.Project, error) {
-	// TODO: Implement this method
 	return nil, nil
 }

@@ -43,3 +43,27 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "project created successfully", "user": user})
 }
+
+func (h *ProjectHandler) GetProjectsByUserID(c *gin.Context) {
+	userId := c.Query("user_id")
+	if userId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+	userSub, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized access - user not found in context"})
+		return
+	}
+	user := userSub.(utils.TokenSub)
+	if user.Id != userId {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: cannot access projects of another user"})
+		return
+	}
+	projects, err := h.projectService.GetProjectsByUserID(c.Request.Context(), userId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get projects"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"projects": projects})
+}

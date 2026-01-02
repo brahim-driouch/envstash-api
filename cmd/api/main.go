@@ -85,6 +85,7 @@ func main() {
 
 		//projects routes
 		projectRoutes.POST("/", auth.AuthMiddleware(authService), projectHandler.CreateProject)
+		projectRoutes.GET("/", auth.AuthMiddleware(authService), projectHandler.GetProjectsByUserID)
 		// projectRoutes.GET("/:id", auth.AuthMiddleware(authService), projectHandler.GetProjectByID)
 		// projectRoutes.PUT("/:id", auth.AuthMiddleware(authService), projectHandler.UpdateProject)
 		// projectRoutes.DELETE("/:id", auth.AuthMiddleware(authService), projectHandler.DeleteProject)
