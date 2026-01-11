@@ -49,7 +49,17 @@ func main() {
 	authRoutes := apiV1.Group("/auth")
 	projectRoutes := apiV1.Group("/projects")
 	userRoutes := apiV1.Group("/users")
-	//instantiate user service and user repo
+	teamRoutes := apiV1.Group("/teams")
+	contributorRoutes := apiV1.Group("/contributors")
+
+	// groupes routes where multiple are needed in the same request
+	// dashboardRoutes := apiV1.Group("/dashboard")
+
+	//contributors service
+	contributorRepository := repository.NewContributorRepository(dbPool)
+	contributorService := services.NewContributorService(contributorRepository)
+	contributorHandler := handlers.NewContributorHandler(contributorService)
+	//user service
 	userRepository := repository.NewUserRepository(dbPool)
 	userService := services.NewUserService(userRepository)
 	userHandler := handlers.NewUserHandler(userService)
@@ -66,7 +76,17 @@ func main() {
 	statsRepository := repository.NewStatsRepository(dbPool)
 	statsService := services.NewStatsService(statsRepository)
 	statsHandler := handlers.NewStatsHandler(statsService)
+	// team services
+	teamRepository := repository.NewTeamRepository(dbPool)
+	teamService := services.NewTeamService(teamRepository)
+	teamHandler := handlers.NewTeamHandler(teamService)
+	// member services
+	// memberRepository := repository.NewMemberRepository(dbPool)
+	// memberService := services.NewMemberService(memberRepository)
+	// memberHandler := handlers.NewMemberHandler(memberService)
+	//aggregator service
 
+	// dashboardService := services.NewDashboardService(memberRepository, teamRepository, projectRepository)
 	//public routes
 	authRoutes.POST("/register", authHandler.RegisterUser)
 	authRoutes.GET("/verify", authHandler.VerifyEmail)
@@ -93,6 +113,18 @@ func main() {
 		// stats
 		userRoutes.GET("/:id/stats", auth.AuthMiddleware(authService), statsHandler.GetUserStats)
 
+		//team routes
+		teamRoutes.POST("/", auth.AuthMiddleware(authService), teamHandler.CreateTeam)
+		teamRoutes.GET("/", auth.AuthMiddleware(authService), teamHandler.GetTeamsByUserID)
+		teamRoutes.DELETE("/:team_id", auth.AuthMiddleware(authService), teamHandler.DeleteTeam)
+
+		//dashboard routes
+		// get user owned teams along with team members and project assigned to each team
+		// dashboardRoutes.GET("/teams", auth.AuthMiddleware(authService), dashboardService.GetUserTeams)
+		// contributors routes
+		contributorRoutes.POST("/", auth.AuthMiddleware(authService), contributorHandler.CreateContributor)
+		contributorRoutes.GET("/", auth.AuthMiddleware(authService), contributorHandler.GetContributorsByUserID)
+		contributorRoutes.GET("/:id", auth.AuthMiddleware(authService), contributorHandler.GetContributorByID)
 	}
 
 	// Start the server

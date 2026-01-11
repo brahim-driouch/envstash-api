@@ -37,10 +37,11 @@ type ProjectWithDetails struct {
 
 // ProjectMember represents a user's membership in a project
 type ProjectMember struct {
+	ID        string    `json:"id" db:"id"`
 	ProjectID string    `json:"project_id" db:"project_id"`
 	UserID    string    `json:"user_id" db:"user_id"`
-	Role      string    `json:"role" db:"role" validate:"oneof=owner editor viewer"`
-	AddedAt   time.Time `json:"added_at" db:"added_at"`
+	MemberID  string    `json:"member_id" db:"member_id"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 // ProjectMemberWithUser includes user details
@@ -111,7 +112,7 @@ type ProjectDetailsResponse struct {
 	RepoURL     *string                 `json:"repo_url,omitempty"`
 	Description string                  `json:"description,omitempty"`
 	User        UserResponse            `json:"user"`
-	Team        *TeamResponse           `json:"team,omitempty"`
+	Team        *Team                   `json:"team,omitempty"`
 	Members     []ProjectMemberResponse `json:"members"`
 	EnvVars     []EnvVarResponse        `json:"env_vars"`
 	CreatedAt   time.Time               `json:"created_at"`
@@ -167,20 +168,6 @@ type ProjectPermissions struct {
 // HELPER STRUCTS
 // =====================================================
 
-// Team (simplified - should be in teams package)
-type Team struct {
-	ID        string    `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-}
-
-// TeamResponse for API responses
-type TeamResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
 // EnvironmentVariable (simplified - should be in env_vars package)
 type EnvironmentVariable struct {
 	ID        string    `json:"id" db:"id"`
@@ -188,6 +175,7 @@ type EnvironmentVariable struct {
 	Key       string    `json:"key" db:"key"`
 	Value     string    `json:"value" db:"value"` // Encrypted
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	CreatedBy string    `json:"created_by" db:"created_by"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 

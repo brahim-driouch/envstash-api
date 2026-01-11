@@ -50,13 +50,12 @@ func (h *ProjectHandler) GetProjectsByUserID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
 		return
 	}
-	userSub, exists := c.Get("user")
+	userID, exists := c.Get("userId")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized access - user not found in context"})
 		return
 	}
-	user := userSub.(utils.TokenSub)
-	if user.Id != userId {
+	if userID != userId {
 		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: cannot access projects of another user"})
 		return
 	}

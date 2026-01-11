@@ -60,3 +60,7 @@ func (s *ProjectService) GetProjectsByUserID(ctx context.Context, userID string)
 	}
 	return projects, nil
 }
+
+func (s *ProjectService) GetProjectDetails(ctx context.Context, projectID string) (*models.ProjectWithDetails, error) {
+	return nil, nil
+}

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"github.com/brahim-driouch/envstash.git/internal/models"
@@ -71,4 +72,47 @@ func (r *ProjectRepository) GetProjectsByUserID(ctx context.Context, userID stri
 
 func (r *ProjectRepository) GetProjectByName(ctx context.Context, name string, userID string) (*models.Project, error) {
 	return nil, nil
+}
+
+func (r *ProjectRepository) GetProjectMembers(ctx context.Context, projectID string) (*[]models.ProjectMember, error) {
+	if projectID == "" {
+		return nil, errors.New("invalid prject ID")
+	}
+	var projectMembers []models.ProjectMember
+	rows, err := r.db.Query(ctx, queries.ProjectQueries.GetProjectMembers, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var projectMember models.ProjectMember
+		err := rows.Scan(&projectMember.ID, &projectMember.ProjectID, &projectMember.UserID, &projectMember.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		projectMembers = append(projectMembers, projectMember)
+	}
+	return &projectMembers, nil
+}
+
+func (r *ProjectRepository) GetProjectVars(ctx context.Context, projectID string) (*[]models.EnvironmentVariable, error) {
+	if projectID == "" {
+		return nil, errors.New("invalid project ID")
+	}
+	rows, err := r.db.Query(ctx, queries.ProjectQueries.GetProjectVars, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var projectVars []models.EnvironmentVariable
+
+	for rows.Next() {
+		var projectVar models.EnvironmentVariable
+		err := rows.Scan(&projectVar.ID, &projectVar.ProjectID, &projectVar.Key, &projectVar.Value, &projectVar.CreatedAt, &projectVar.UpdatedAt, &projectVar.CreatedBy)
+		if err != nil {
+			return nil, err
+		}
+		projectVars = append(projectVars, projectVar)
+	}
+	return &projectVars, nil
 }
