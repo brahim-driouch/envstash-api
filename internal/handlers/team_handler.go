@@ -84,3 +84,25 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Team deleted successfully"})
 }
+
+//get team by id
+
+func (h *TeamHandler) GetTeamByID(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	teamID := c.Param("team_id")
+	if teamID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "team_id is required"})
+		return
+	}
+	team, err := h.teamService.GetTeamByID(ctx, userID.(string), teamID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get team"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"team": team})
+}

@@ -40,9 +40,13 @@ func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.CreateTeam
 	return nil
 }
 
-func (r *TeamRepository) GetTeamByID(ctx context.Context, id string) (*models.Team, error) {
-	// Implementation goes here
-	return nil, nil
+func (r *TeamRepository) GetTeamByID(ctx context.Context, teamID string, userID string) (*models.Team, error) {
+	var team models.Team
+	err := r.db.QueryRow(ctx, queries.TeamQueries.GetTeamByID, teamID, userID).Scan(&team.ID, &team.Name, &team.Description, &team.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &team, nil
 }
 func (r *TeamRepository) GetTeamsByUserID(ctx context.Context, userID string) ([]models.Team, error) {
 	if userID == "" {

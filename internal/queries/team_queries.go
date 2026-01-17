@@ -17,6 +17,7 @@ var TeamQueries = struct {
 		SELECT id, name, user_id, created_at
 		FROM teams
 		WHERE id = $1
+		AND user_id = $2
 		AND deleted_at IS NULL
 	`,
 

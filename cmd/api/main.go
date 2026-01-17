@@ -117,7 +117,7 @@ func main() {
 		teamRoutes.POST("/", auth.AuthMiddleware(authService), teamHandler.CreateTeam)
 		teamRoutes.GET("/", auth.AuthMiddleware(authService), teamHandler.GetTeamsByUserID)
 		teamRoutes.DELETE("/:team_id", auth.AuthMiddleware(authService), teamHandler.DeleteTeam)
-
+		teamRoutes.GET("/:team_id", auth.AuthMiddleware(authService), teamHandler.GetTeamByID)
 		//dashboard routes
 		// get user owned teams along with team members and project assigned to each team
 		// dashboardRoutes.GET("/teams", auth.AuthMiddleware(authService), dashboardService.GetUserTeams)

@@ -34,7 +34,19 @@ func (s *TeamService) CreateTeam(ctx context.Context, userID string, team *model
 	}
 	return nil
 }
-
+func (s *TeamService) GetTeamByID(ctx context.Context, userID string, teamID string) (*models.Team, error) {
+	if teamID == "" {
+		return nil, errors.New("team ID is required")
+	}
+	if userID == "" {
+		return nil, errors.New("user ID is required")
+	}
+	team, err := s.teamRepo.GetTeamByID(ctx, teamID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return team, nil
+}
 func (s *TeamService) GetTeamsByUserID(ctx context.Context, userID string) ([]models.Team, error) {
 
 	if userID == "" {
